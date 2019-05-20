@@ -32,5 +32,8 @@
     <ClInclude Include="src\stb_image_write.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="src\sphere.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

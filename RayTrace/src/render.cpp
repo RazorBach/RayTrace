@@ -5,42 +5,30 @@
 #include <fstream>
 #include <algorithm>
 #include "math.h"
+#include "sphere.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-void testb() {
-	int w, h, n;
 
-	//rgba
-	//load image
-	unsigned char *data = stbi_load("pic/rgb.png", &w, &h, &n, 0);
-
-	printf("%d, %d, %d\n", w, h, n);
-
-	//change pixel
-
-	//rgba,write 10 red pixel at line 11
-	for (int dx = 0; dx < 10; ++dx)
-	{
-		data[n * w * 10 + dx * n + 0] = 255;
-		data[n * w * 10 + dx * n + 1] = 0;
-		data[n * w * 10 + dx * n + 2] = 0;
-		data[n * w * 10 + dx * n + 3] = 255;
+Vec3f cast_ray(const Vec3f &orig, const Vec3f &dir, const Sphere &sphere) {
+	float sphere_dist = std::numeric_limits<float>::max();
+	if (!sphere.ray_intersect(orig, dir, sphere_dist)) {
+		return Vec3f(0.2, 0.7, 0.8); // background color
 	}
-
-	//write image
-	stbi_write_png("pic/rgb2.png", w, h, n, data, w * 4);
-
-
-	stbi_image_free(data);
+	return Vec3f(0.4, 0.4, 0.3);
 }
 
-void render() {
+void render(const Sphere &sphere) {
 	int width, height, comp, comp2;
+	const int fov = M_PI / 2.;
 	unsigned char *data = stbi_load("pic/test.png", &width, &height, &comp, STBI_rgb_alpha);
 	unsigned char *data2 = stbi_load("pic/out.jpg", &width, &height, &comp2, STBI_rgb);
+
+
+	std::vector<Vec3f> framebuffer(width*height);
 
 	if(data == nullptr)
 		throw(std::string("Failed to load png"));
@@ -49,9 +37,24 @@ void render() {
 
 	for (size_t j = 0; j < height; j++) {
 		for (size_t i = 0; i < width; i++) {
-			data[j * width * comp + i * comp + 0] = (char)(255 *  (float) (j / float(height)));
-			data[j * width * comp + i * comp + 1] = (char)(255 * (float) (i / float(width)));
-			data[j * width * comp + i * comp + 2] = 0;
+			framebuffer[i + j * width] = Vec3f(255 * (float) j / float(height), 255 * (float) i / float(width), 0);
+		}
+	}
+
+	for (size_t j = 0; j<height; j++) {
+		for (size_t i = 0; i<width; i++) {
+			float x = (2 * (i + 0.5) / (float)width - 1)*tan(fov / 2.)*width / (float)height;
+			float y = -(2 * (j + 0.5) / (float)height - 1)*tan(fov / 2.);
+			Vec3f dir = Vec3f(x, y, -1).normalize();
+			framebuffer[i + j * width] = cast_ray(Vec3f(0, 0, 0), dir, sphere);
+		}
+	}
+
+	for (size_t j = 0; j < height; j++) {
+		for (size_t i = 0; i < width; i++) {
+			data[j * width * comp + i * comp + 0] = (char)  framebuffer[i + j * width][0];
+			data[j * width * comp + i * comp + 1] = (char)  framebuffer[i + j * width][1];
+			data[j * width * comp + i * comp + 2] = (char)  framebuffer[i + j * width][2];
 			data[j * width * comp + i * comp + 3] = 255;
 		}
 	}
